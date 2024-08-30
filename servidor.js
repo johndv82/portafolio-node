@@ -1,25 +1,70 @@
-const http = require('http')
-const fs = require('fs')
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
 
-// Crear el servidor HTTP
-const server = http.createServer((req, res) => {
-    // Observa como vienen las rutas
-    // console.log(req.url);
-    let home = fs.readFileSync('./public/index.html')
-    if (req.url === '/') {
-        res.write(home);
-        return res.end();
+const server = http.createServer(function(req, res){
+    //Evitar solicitud de favicon.ico
+    if(req.url == '/favicon.png'){
+        res.writeHead(204);
+        res.end();
+        return;
     }
-    if (req.url === '/photos') {
-        let photos = fs.readFileSync('./public/photos.html')
-        res.write(photos);
-        return res.end();
+
+    //Obtén la ruta absoluta del archivo solicitado
+    const filePath = path.join(__dirname, 'public', req.url);
+
+    console.log('Ruta del archivo solicitado: ', filePath); //Mensaje de depuración
+
+    //Verifica si filePath es un archivo o un directorio
+    if(fs.statSync(filePath).isDirectory()){
+        console.error('Se intentó leer un directorio: ', filePath);
+        res.writeHead(500, {'Content-Type': 'text/html'});
+        res.end('Error del servidor');
+        return;
     }
-    res.write(home);
-    return res.end();
+
+    //Lee el archivo solicitado y responde con su contenido
+    fs.readFile(filePath, (err, content)=>{
+        if(err){
+            console.error('Error al leer el archivo: ', err);
+            if(err.code == 'ENOENT'){
+                console.error('Archivo no encontrado: ', filePath);
+                res.writeHead(404, {'Content-Type':'text/html'});
+                res.end('Archivo no encontrado');
+            }else{
+                res.writeHead(500, {'Content-Type':'text/html'});
+                res.end('Error del servidor');
+            }
+        }else{
+            const ext = path.extname(filePath);
+            let contentType = 'text/html';
+            switch(ext){
+                case '.js':
+                    contentType = 'text/javascript';
+                    break;
+                case '.css':
+                    contentType = 'text/css';
+                    break;
+                case '.json':
+                    contentType = 'text/json';
+                    break;
+                case '.png':
+                    contentType = 'text/png';
+                    break;
+                case '.jpg':
+                    contentType = 'text/jpeg';
+                    break;
+            }
+            console.log('Sirviendo archivo: ', filePath);
+
+            //Archivo encontrado, evía el contenido como respuesta
+            res.writeHead(200, {'Content-Type': contentType});
+            res.end(content);
+        }
+    });
 });
 
-// Especificar el puerto del servidor
-server.listen(8080, (err) => {
-    console.log('Server listen on port 8080');
+const PORT = 3000;
+server.listen(PORT, ()=>{
+    console.log(`Servidor en funcionamiento en http://localhost:${PORT}`);
 });
