@@ -4,7 +4,7 @@ const path = require('path');
 
 const server = http.createServer(function(req, res){
     //Evitar solicitud de favicon.ico
-    if(req.url == '/favicon.png'){
+    if(req.url == '/favicon.png' || req.url.endsWith('.map')){
         res.writeHead(204);
         res.end();
         return;
